@@ -16,23 +16,12 @@ fundamentals from KM-05, not just pandas shortcuts.
 
 def total_sales_records(sales_rows: list) -> int:
     """
-    Count how many sales records there are, using a loop (not len()
-    directly on the list — practise the loop!).
-
-    Args:
-        sales_rows: a list of dictionaries, one per sale, e.g.
-            [{"product_id": "P001", "quantity": 2, ...}, ...]
-
-    Returns:
-        the total number of records, as an integer, counted with a loop.
+    Count the number of sales records using a loop.
     """
-    # TODO:
-    #   count = 0
-    #   for row in sales_rows:
-    #       count += 1
-    #   return count
-    raise NotImplementedError
-
+    count = 0
+    for row in sales_rows:
+        count += 1
+    return count
 
 def low_stock_alert(products_rows: list, threshold: int = 5) -> list:
     """
@@ -48,13 +37,14 @@ def low_stock_alert(products_rows: list, threshold: int = 5) -> list:
     Returns:
         a list of product_name strings that need re-ordering.
     """
-    # TODO:
-    #   alerts = []
-    #   for product in products_rows:
-    #       if product["in_stock"] is False:   # or == "False", check your data type
-    #           alerts.append(product["product_name"])
-    #   return alerts
-    raise NotImplementedError
+    
+    alerts = []
+
+    for product in products_rows:
+        if product["in_stock"] == False:
+            alerts.append(product["product_name"])
+
+    return alerts
 
 
 def monthly_sales_trend(sales_rows: list) -> dict:
@@ -80,7 +70,18 @@ def monthly_sales_trend(sales_rows: list) -> dict:
                 trend[month] = row["quantity"]
         return trend
     """
-    raise NotImplementedError
+    
+    trend = {}
+
+    for row in sales_rows:
+        month = row["sale_date"][:7]
+
+        if month in trend:
+            trend[month] += row["quantity"]
+        else:
+            trend[month] = row["quantity"]
+
+    return trend
 
 
 def classify_transaction_size(quantity: int) -> str:
@@ -95,21 +96,60 @@ def classify_transaction_size(quantity: int) -> str:
 
     TODO: implement the if / elif / else chain above.
     """
-    raise NotImplementedError
+    
+    if quantity >= 5:
+        return "Bulk"
+    elif quantity >= 2:
+        return "Multiple"
+    elif quantity == 1:
+        return "Single"
+    else:
+        return "Invalid"
+
 
 
 def average_basket_size(sales_rows: list) -> float:
     """
-    Calculate the average quantity per sale across ALL sales, using a
-    loop to sum quantities and a loop (or len()) to count records.
-
-    Returns:
-        a float rounded to 2 decimal places.
-
-    TODO:
-        total = 0
-        for row in sales_rows:
-            total += row["quantity"]
-        return round(total / len(sales_rows), 2)
+    Calculate the average quantity per sale across all sales.
+    Return the result rounded to two decimal places.
     """
-    raise NotImplementedError
+    if not sales_rows:
+        return 0.0
+
+    total = 0
+
+    for row in sales_rows:
+        total += row["quantity"]
+
+    return round(total / len(sales_rows), 2)
+from data_cleaning import load_raw_data, clean_products, clean_sales
+from analysis import (
+    total_sales_records,
+    low_stock_alert,
+    monthly_sales_trend,
+    classify_transaction_size,
+    average_basket_size,
+)
+
+products, sales = load_raw_data(
+    "data/products.csv",
+    "data/sales.csv"
+)
+
+clean_products_df = clean_products(products)
+clean_sales_df = clean_sales(
+    sales,
+    clean_products_df["product_id"]
+)
+product_rows = clean_products_df.to_dict("records")
+sales_rows = clean_sales_df.to_dict("records")
+
+print("Sales records:", total_sales_records(sales_rows))
+print("Low-stock alerts:", low_stock_alert(product_rows))
+print("Monthly trend:", monthly_sales_trend(sales_rows))
+print("Transaction examples:",
+      classify_transaction_size(1),
+      classify_transaction_size(3),
+      classify_transaction_size(5),
+      classify_transaction_size(0))
+print("Average basket size:", average_basket_size(sales_rows))
