@@ -24,8 +24,9 @@ import visualize
 import security
 
 DATA_DIR = os.path.join("..", "data")   # adjust if your folder layout differs
-PRODUCTS_CSV = os.path.join(DATA_DIR, "products.csv")
-SALES_CSV = os.path.join(DATA_DIR, "sales.csv")
+PRODUCTS_CSV = "data/products.csv"
+SALES_CSV = "data/sales.csv"
+
 DB_PATH = "store.db"
 
 
@@ -55,14 +56,26 @@ def main():
 
     # ---- Task 3: build the database ---------------------------------
     print("\n[3/5] Building database...")
-    conn = database.get_connection(DB_PATH)
-    database.create_tables(conn)
-    database.insert_products(conn, clean_products)
-    database.insert_sales(conn, clean_sales)
+    
+    conn = database.create_database(DB_PATH)
+    database.insert_data(conn, clean_products, clean_sales)
 
     print("\nSample SQL query results — revenue per product:")
-    for row in database.query_total_revenue_per_product(conn):
-        print("   ", row)
+
+    revenue_query = """
+    SELECT
+        p.product_name,
+        ROUND(SUM(s.quantity * p.unit_price), 2) AS total_revenue
+    FROM products AS p
+    JOIN sales AS s
+        ON p.product_id = s.product_id
+    GROUP BY p.product_id, p.product_name
+    ORDER BY total_revenue DESC
+    """
+
+    results = database.run_query(conn, revenue_query)
+    print(results.to_string(index=False))
+
 
     # ---- Task 4: programming logic / analysis -----------------------
     print("\n[4/5] Running analysis...")
@@ -77,9 +90,9 @@ def main():
 
     # ---- Task 5: visualisation ---------------------------------------
     print("\n[5/5] Generating charts...")
-    revenue_rows = database.query_total_revenue_per_product(conn)
-    names = [r[0] for r in revenue_rows]
-    revenues = [r[1] for r in revenue_rows]
+    revenue_rows = database.run_query(conn, revenue_query)
+    names = revenue_rows["product_name"].tolist()
+    revenues = revenue_rows["total_revenue"].tolist()
     visualize.bar_chart_revenue_per_product(names, revenues)
     visualize.line_chart_monthly_trend(trend)
     print("Charts saved as revenue_per_product.png and monthly_trend.png")
